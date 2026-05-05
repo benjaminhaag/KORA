@@ -8,7 +8,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::App;
+use crate::app::{App, Mode};
 
 use crate::host::Entry;
 
@@ -22,13 +22,15 @@ struct AppLayout {
 pub fn draw(app: &App, frame: &mut Frame) {
     let area = frame.area();
     frame.render_widget(app, area);
-    
-    let layout = layout(area);
 
-    let cursor_x = layout.search.x + 1 + app.query.len() as u16;
-    let cursor_y = layout.search.y + 1;
-
-    frame.set_cursor_position((cursor_x, cursor_y));
+    if app.mode == Mode::Finder {
+        let layout = layout(area);
+        
+        let cursor_x = layout.search.x + 1 + app.query.len() as u16;
+        let cursor_y = layout.search.y + 1;
+        
+        frame.set_cursor_position((cursor_x, cursor_y));
+    }
 }
 
 fn layout(area: Rect) -> AppLayout {
@@ -116,8 +118,16 @@ impl App {
         } else {
             self.query.clone().into()
         };
+
+        let block = Block::bordered()
+            .title(" Search ")
+            .border_style(match self.mode {
+                Mode::Finder => Style::default().fg(Color::Yellow),
+               _ => Style::default(),
+            });
+
         Paragraph::new(search_text)
-            .block(Block::bordered().title(" Search "))
+            .block(block)
             .render(area, buf);
     }
 
@@ -139,8 +149,15 @@ impl App {
             })
             .collect();
 
+        let block = Block::bordered()
+            .title(" Hosts ")
+            .border_style(match self.mode {
+                Mode::Normal => Style::default().fg(Color::Yellow),
+                _ => Style::default(),
+            });
+
         let list = List::new(items)
-            .block(Block::bordered().title(" Hosts "))
+            .block(block)
             .highlight_style(
                 Style::default()
                     .fg(Color::Black)

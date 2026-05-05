@@ -5,12 +5,19 @@ use ratatui::{DefaultTerminal, Frame};
 
 use crate::host::Entry;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    Normal,
+    Finder,
+}
+
 #[derive(Debug)]
 pub struct App {
     pub entries: Vec<Entry>,
     pub selected: usize,
     pub query: String,
     pub connect_target: Option<String>,
+    pub mode: Mode,
     pub exit: bool,
 }
 
@@ -28,6 +35,7 @@ impl Default for App {
             selected: 0,
             connect_target: None,
             query: String::new(),
+            mode: Mode::Normal,
             exit: false,
         }
     }
@@ -104,27 +112,45 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
+        match self.mode {
+            Mode::Normal => self.handle_normal_key_event(key_event),
+            Mode::Finder => self.handle_finder_key_event(key_event),
+        }
+    }
+
+    fn handle_normal_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
             KeyCode::Up => self.previous_entry(),
             KeyCode::Down => self.next_entry(),
-            
+            KeyCode::Enter => {
+                self.connect_selected();
+            },
+            KeyCode::Char('f') => self.mode = Mode::Finder,
+            KeyCode::Char(c) => {
+                self.mode = Mode::Finder;
+                self.query.push(c);
+            },
+            _ => {}
+        }
+    }
+
+    fn handle_finder_key_event(&mut self, key_event: KeyEvent) {
+        match key_event.code {
             KeyCode::Backspace => {
                 self.query.pop();
             }
 
             KeyCode::Esc => {
                 self.query.clear();
+                self.mode = Mode::Normal;
             }
 
-            KeyCode::Enter => self.connect_selected(),
+            KeyCode::Enter => self.mode = Mode::Normal,
 
             KeyCode::Char(' ') => {}
 
-            KeyCode::Char(c) => {
-                self.query.push(c);
-            }
-
+            KeyCode::Char(c) => self.query.push(c),
             _ => {}
         }
     }
