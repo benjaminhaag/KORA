@@ -3,12 +3,14 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
-    text::Line,
+    text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph, Widget},
     Frame,
 };
 
 use crate::app::App;
+
+use crate::host::Entry;
 
 #[derive(Debug, Clone, Copy)]
 struct AppLayout {
@@ -53,7 +55,7 @@ fn layout(area: Rect) -> AppLayout {
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let outer_block = Block::bordered()
-            .title(Line::from(" KORA ".bold()).centered())
+            .title(Line::from(" KORA - KORA Opinionated Remote Access ".bold()).centered())
             .title_bottom(
                 Line::from(vec![
                     " Navigate ".into(),
@@ -79,6 +81,35 @@ impl Widget for &App {
 }
 
 impl App {
+
+    fn highlight_matches(&self, text: &str) -> Line<'_> {
+        if self.query.is_empty() {
+            return Line::from(text.to_string());
+        }
+
+        let mut spans = Vec::new();
+        let mut query_chars = self.query.chars().map(|c| c.to_ascii_lowercase());
+
+        let mut current = query_chars.next();
+        
+        for c in text.chars() {
+            if let Some(q) = current {
+                if c.to_ascii_lowercase() == q {
+                    spans.push(Span::styled(
+                        c.to_string(),
+                        Style::default().fg(Color::Yellow),
+                    ));
+                    current = query_chars.next();
+                    continue;
+                }
+            }
+
+            spans.push(Span::raw(c.to_string()));
+        }
+
+        Line::from(spans)
+    }
+
     fn render_search(&self, area: Rect, buf: &mut Buffer) {
         let search_text = if self.query.is_empty() {
             "Search hosts...".dim()
@@ -91,10 +122,21 @@ impl App {
     }
 
     fn render_host_list(&self, area: Rect, buf: &mut Buffer) {
-        let items: Vec<ListItem> = self
-            .hosts
+
+        let visible = self.visible_entries();
+
+        let items: Vec<ListItem> = visible
             .iter()
-            .map(|host| ListItem::new(Line::from(host.name.clone()).centered()))
+            .map(|visible_entry| {
+                let indent = "  ".repeat(visible_entry.depth);
+
+                let label = match visible_entry.entry {
+                    Entry::Host(host) => format!("{indent} {}", host.name),
+                    Entry::Folder(folder) => format!("{indent} {}", folder.name),
+                };
+
+                ListItem::new(self.highlight_matches(&label))
+            })
             .collect();
 
         let list = List::new(items)
@@ -116,39 +158,49 @@ impl App {
         let inner = block.inner(area);
         block.render(area, buf);
 
-        let Some(host) = self.selected_host() else {
-            Paragraph::new("No host selected")
+        match self.selected_entry() {
+            Some(Entry::Host(host)) => {
+                let rows = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Length(3),
+                        Constraint::Length(3),
+                        Constraint::Min(3),
+                    ])
+                    .split(inner);
+
+                Paragraph::new(Line::from(vec![
+                    host.name.clone().into(),
+                ]))
+                .block(Block::bordered().title(" Name "))
+                .render(rows[0], buf);
+
+                Paragraph::new(Line::from(vec![
+                    host.target.clone().green(),
+                ]))
+                .block(Block::bordered().title(" Target "))
+                .render(rows[1], buf);
+
+                
+                let config_lines: Vec<Line> = host
+                    .config
+                    .iter()
+                    .map(|line| Line::from(line.clone().black()))
+                    .collect();
+                Paragraph::new(config_lines)
+                    .block(Block::bordered().title(" Config "))
+                    .wrap(ratatui::widgets::Wrap { trim: false })
+                    .render(rows[2], buf);
+            }
+            _ => {
+                Paragraph::new("No host selected")
                 .red()
                 .centered()
                 .render(inner, buf);
-            return;
+                return;
+            }
         };
 
-        let rows = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(3),
-                Constraint::Length(3),
-                Constraint::Min(3),
-            ])
-            .split(inner);
-
-        Paragraph::new(Line::from(vec![
-            "Name\n".bold(),
-            host.name.clone().into(),
-        ]))
-        .block(Block::bordered().title(" Name "))
-        .render(rows[0], buf);
-
-        Paragraph::new(Line::from(vec![
-            host.target.clone().green(),
-        ]))
-        .block(Block::bordered().title(" Target "))
-        .render(rows[1], buf);
-
-        Paragraph::new(host.description.clone().black())
-            .block(Block::bordered().title(" Description "))
-            .wrap(ratatui::widgets::Wrap { trim: true })
-            .render(rows[2], buf);
+        
     }
 }
