@@ -44,7 +44,7 @@ fn layout(area: Rect) -> AppLayout {
 
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(35), Constraint::Percentage(65)])
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
         .split(main_chunks[1]);
 
     AppLayout {
@@ -180,7 +180,7 @@ impl App {
             .highlight_style(
                 Style::default()
                     .fg(Color::Black)
-                    .bg(Color::White),
+                    .bg(if self.mode == Mode::Normal { Color::White } else { Color::DarkGray }),
             );
 
         let mut state = ListState::default();
@@ -207,8 +207,9 @@ impl App {
                     .direction(Direction::Vertical)
                     .constraints([
                         Constraint::Length(3),
-                        Constraint::Length(3),
+                        // Constraint::Length(3),
                         Constraint::Min(3),
+                        Constraint::Length(3),
                     ])
                     .split(inner);
 
@@ -218,11 +219,11 @@ impl App {
                 .block(Block::bordered().title(" Name "))
                 .render(rows[0], buf);
 
-                Paragraph::new(Line::from(vec![
-                    host.target.clone().green(),
-                ]))
-                .block(Block::bordered().title(" Target "))
-                .render(rows[1], buf);
+                // Paragraph::new(Line::from(vec![
+                //     host.target.clone().green(),
+                // ]))
+                // .block(Block::bordered().title(" Target "))
+                // .render(rows[1], buf);
 
                 
                 let config_lines: Vec<Line> = host
@@ -233,7 +234,30 @@ impl App {
                 Paragraph::new(config_lines)
                     .block(Block::bordered().title(" Config "))
                     .wrap(ratatui::widgets::Wrap { trim: false })
-                    .render(rows[2], buf);
+                    .render(rows[1], buf);
+
+                let actions = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                    ])
+                    .split(rows[2]);
+                let buttons = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([
+                        Constraint::Percentage(30),
+                        Constraint::Percentage(20),
+                        Constraint::Percentage(30),
+                    ])
+                    .split(actions[1]);
+
+                Paragraph::new(" Connect ")
+                    .centered()
+                    .style(Style::default().fg(Color::Black).bg(if self.mode == Mode::Details { Color::White } else {Color::DarkGray }))
+                    .render(buttons[1], buf);
+
             }
             _ => {
                 Paragraph::new("No host selected")
