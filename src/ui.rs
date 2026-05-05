@@ -56,17 +56,36 @@ fn layout(area: Rect) -> AppLayout {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
+
+        let line = match self.mode {
+            Mode::Normal => Line::from(vec![
+                " Navigate ".into(),
+                "<↑/↓, j/k>".blue().bold(),
+                " Details ".into(),
+                "<Enter>".blue().bold(),
+                " Finder ".into(),
+                "<f>".blue().bold(),
+                " Quit ".into(),
+                "<q> ".blue().bold(),
+                ]),
+            Mode::Finder => Line::from(vec![
+                " Search ".into(),
+                "<Enter>".blue().bold(),
+                " Escape ".into(),
+                "<Esc> ".blue().bold(),
+            ]),
+            Mode::Details => Line::from(vec![
+                " Connect ".into(),
+                "<Enter>".blue().bold(),
+                " Escape ".into(),
+                "<Esc> ".blue().bold(),
+            ]),
+        };
+
         let outer_block = Block::bordered()
             .title(Line::from(" KORA - KORA Opinionated Remote Access ".bold()).centered())
             .title_bottom(
-                Line::from(vec![
-                    " Navigate ".into(),
-                    "<↑/↓>".blue().bold(),
-                    " Connect ".into(),
-                    "<Enter>".blue().bold(),
-                    " Quit ".into(),
-                    "<q> ".blue().bold(),
-                ])
+                line
                 .centered(),
             )
             .border_set(border::THICK);
@@ -171,7 +190,14 @@ impl App {
     }
 
     fn render_host_details(&self, area: Rect, buf: &mut Buffer) {
-        let block = Block::bordered().title(" Details ");
+
+        let block = Block::bordered()
+            .title(" Details ")
+            .border_style(match self.mode {
+                Mode::Details => Style::default().fg(Color::Yellow),
+                _ => Style::default(),
+            });
+
         let inner = block.inner(area);
         block.render(area, buf);
 

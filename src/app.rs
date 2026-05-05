@@ -9,6 +9,7 @@ use crate::host::Entry;
 pub enum Mode {
     Normal,
     Finder,
+    Details,
 }
 
 #[derive(Debug)]
@@ -115,17 +116,39 @@ impl App {
         match self.mode {
             Mode::Normal => self.handle_normal_key_event(key_event),
             Mode::Finder => self.handle_finder_key_event(key_event),
+            Mode::Details => self.handle_details_key_event(key_event),
         }
     }
 
     fn handle_normal_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
-            KeyCode::Up => self.previous_entry(),
-            KeyCode::Down => self.next_entry(),
+            KeyCode::Up | KeyCode::Char('k') => self.previous_entry(),
+            KeyCode::Down | KeyCode::Char('j') => self.next_entry(),
+            KeyCode::Enter => self.mode = Mode::Details,
+            
+            KeyCode::Char(' ') => {}
+            KeyCode::Char('f') => self.mode = Mode::Finder,
+            KeyCode::Char(c) => {
+                self.mode = Mode::Finder;
+                self.query.push(c);
+            },
+            _ => {}
+        }
+    }
+
+    fn handle_details_key_event(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Char('q') => self.exit(),
             KeyCode::Enter => {
                 self.connect_selected();
             },
+            KeyCode::Esc => {
+                self.query.clear();
+                self.mode = Mode::Normal;
+            }
+            
+            KeyCode::Char(' ') => {}
             KeyCode::Char('f') => self.mode = Mode::Finder,
             KeyCode::Char(c) => {
                 self.mode = Mode::Finder;
@@ -140,16 +163,13 @@ impl App {
             KeyCode::Backspace => {
                 self.query.pop();
             }
+            KeyCode::Enter => self.mode = Mode::Normal,
 
             KeyCode::Esc => {
                 self.query.clear();
                 self.mode = Mode::Normal;
             }
-
-            KeyCode::Enter => self.mode = Mode::Normal,
-
             KeyCode::Char(' ') => {}
-
             KeyCode::Char(c) => self.query.push(c),
             _ => {}
         }
