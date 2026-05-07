@@ -229,7 +229,7 @@ impl App {
                 let config_lines: Vec<Line> = host
                     .config
                     .iter()
-                    .map(|line| Line::from(line.clone().black()))
+                    .map(|line| Line::from(line.clone().dim()))
                     .collect();
                 Paragraph::new(config_lines)
                     .block(Block::bordered().title(" Config "))
