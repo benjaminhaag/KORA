@@ -144,7 +144,6 @@ impl App {
                 self.connect_selected();
             },
             KeyCode::Esc => {
-                self.query.clear();
                 self.mode = Mode::Normal;
             }
             
@@ -162,7 +161,10 @@ impl App {
         match key_event.code {
             KeyCode::Backspace => {
                 self.query.pop();
+                self.selected = 0;
             }
+            KeyCode::Up | KeyCode::Char('k') => self.previous_entry(),
+            KeyCode::Down | KeyCode::Char('j') => self.next_entry(),
             KeyCode::Enter => self.mode = Mode::Normal,
 
             KeyCode::Esc => {
@@ -170,7 +172,10 @@ impl App {
                 self.mode = Mode::Normal;
             }
             KeyCode::Char(' ') => {}
-            KeyCode::Char(c) => self.query.push(c),
+            KeyCode::Char(c) => {
+                self.query.push(c);
+                self.selected = 0;
+            },
             _ => {}
         }
     }
